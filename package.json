@@ -14,7 +14,7 @@
   ],
   "author": "Aparna",
   "license": "ISC",
-  "dependencies":  {
-    "express": "^5.2.1"
+  "dependencies": {
+    "express": "^4.22.1"
   }
 }

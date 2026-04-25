@@ -8,7 +8,23 @@ const app = express(); //instance of express application
 // app.use("/user", (req, res) => {
 //   res.send("Hello from the user route!!");
 // });
-app.get("/user", (req, res) => {
+// app.get("/user") matches ONLY the exact path /user
+// app.use("/user") matches /user, /user/xyz, /user/1, /user/abc/def etc
+//app.get("/ab?c") matches /ac and /abc but not /abbc or /abcc
+//app.get("/ab+c") matches /abc, /abbc, /abbbbc but not /ac or /abcc
+//app.get("/ab*c") matches /ac, /abc, /abcc, /abxyzc etc
+// Pattern	Meaning	          /ac	/abc	/abbc
+// /ab+c	b one or more times	✗ No	✓ Yes	✓ Yes
+// /ab*c	anything between ab and c	✓ Yes	✓ Yes	✓ Yes
+// Use regex to match /ac, /abc, /abbc, etc.
+// /a(bc)?d/ matches /ad and /abcd but not /abccd meaning bc is optional and can occur 0 or 1 time
+// /a(bc)+d matches /abcd, /abcbcd, /abcbcbcd but not /ad meaning bc is mandatory and can occur 1 or more times
+// /.*fly$/ regex matches /butterfly, /dragonfly, /housefly but not /fly or /flying
+app.get("/user/:id/:name/:age", (req, res) => {
+  console.log(req.params); //to get the path parameters from the request
+  //http://localhost:7777/user/123/Aparna/34 in postman or browser
+  console.log(req.query); //to get the query parameters from the request
+  //http://localhost:7777/user?name=John&age=30 in postman or browser
   res.send({ firstName: "John", lastName: "Doe" });
 });
 
