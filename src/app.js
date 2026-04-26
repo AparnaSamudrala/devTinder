@@ -1,46 +1,41 @@
 //console.log("Starting a new Project!");
 const express = require("express");
 const app = express(); //instance of express application
-//This will match only GET API calls to /user route
-//If you use app.use first even before specifying the HTTP method, then it will match all the API calls to /user route  and always it only execute the first callback function and never execute the other callback functions for the same route
-//that means if you use app.use first for /user route, then it will always execute the callback function of app.use and never execute the callback functions of app.get, app.post and app.delete for /user route
-//This will match all the HTTP method API calls to /user route . Hence other http methods never get executed for /user route  so order matters in express application
-// app.use("/user", (req, res) => {
-//   res.send("Hello from the user route!!");
-// });
-// app.get("/user") matches ONLY the exact path /user
-// app.use("/user") matches /user, /user/xyz, /user/1, /user/abc/def etc
-//app.get("/ab?c") matches /ac and /abc but not /abbc or /abcc
-//app.get("/ab+c") matches /abc, /abbc, /abbbbc but not /ac or /abcc
-//app.get("/ab*c") matches /ac, /abc, /abcc, /abxyzc etc
-// Pattern	Meaning	          /ac	/abc	/abbc
-// /ab+c	b one or more times	✗ No	✓ Yes	✓ Yes
-// /ab*c	anything between ab and c	✓ Yes	✓ Yes	✓ Yes
-// Use regex to match /ac, /abc, /abbc, etc.
-// /a(bc)?d/ matches /ad and /abcd but not /abccd meaning bc is optional and can occur 0 or 1 time
-// /a(bc)+d matches /abcd, /abcbcd, /abcbcbcd but not /ad meaning bc is mandatory and can occur 1 or more times
-// /.*fly$/ regex matches /butterfly, /dragonfly, /housefly but not /fly or /flying
-app.get("/user/:id/:name/:age", (req, res) => {
-  console.log(req.params); //to get the path parameters from the request
-  //http://localhost:7777/user/123/Aparna/34 in postman or browser
-  console.log(req.query); //to get the query parameters from the request
-  //http://localhost:7777/user?name=John&age=30 in postman or browser
-  res.send({ firstName: "John", lastName: "Doe" });
-});
 
-app.post("/user", (req, res) => {
-  console.log("Save data to the database!!");
-  res.send("Data successfully saved to the database!!");
-});
+//This will match all the HTTP method API calls to /test route and send the response "Hello from the test route!!"
+//The callback function inside app.use() is called route handler and it will be executed when the route is matched
+//diff ways to define multiple route handlers in express
+//1. using app.use("/route", rh1,rh2,rh3,etc) where rh1,rh2,rh3 are route handlers
+//2.using array of route handlers app.use("/route", [rh1,rh2,rh3,etc])
+//3. app.use("/route", rh1, [rh2,rh3], rh4) where rh1 and rh4 are route handlers and rh2 and rh3 are route handlers defined in an array there is no big difference between these three ways of defining multiple route handlers in express
+app.use("/user", [
+  (req, res, next) => {
+    //route handler function takes two parameters req and res which are request and response objects respectively
 
-app.delete("/user", (req, res) => {
-  console.log("Delete data from the database!!");
-  res.send("Data successfully deleted from the database!!");
-});
-//This will match all the HTTP method API calls to /test route
-app.use("/test", (req, res) => {
-  res.send("Hello from the test route!!");
-});
+    next(); //next() is used to pass the control to the next route handler
+    // if there are multiple route handlers for the same route if we don't when res.send() is not defined then the next route handler will not be executed and the response will be sent to the client immediately
+    //res.send("Route handler 1");
+  },
+  (req, res, next) => {
+    console.log("Route handler 2 is executed");
+    //res.send("Route handler 2");
+    next();
+  },
+  (req, res, next) => {
+    console.log("Route handler 3 is executed");
+    //res.send("Route handler 3");
+    next();
+  },
+  (req, res, next) => {
+    console.log("Route handler 4 is executed");
+    //res.send("Route handler 4");
+    next();
+  },
+  (req, res) => {
+    console.log("Route handler 5 is executed");
+    res.send("Route handler 5");
+  },
+]); //route handler 1 will be executed first and then route handler 2 will be executed
 
 app.listen(7777, () => {
   console.log("Server is successfully listeing on prt 7777...");
