@@ -2,27 +2,19 @@ const express = require("express");
 const connectToDB = require("./config/database"); //to connect to database
 const User = require("./models/user"); //to perform DB operations on User collection
 const app = express(); //instance of express application
+app.use(express.json()); //to parse the incoming request body as JSON for all routes. This middleware will be executed for every incoming request and it will parse the request body as JSON and make it available in req.body. So we can access the request body in our route handlers using req.body.
 app.post("/signup", async (req, res) => {
-  const userObj = {
-    firstName: "Anushka",
-    lastName: "Shetty",
-    emailId: "Anushka@example.com",
-    password: "password123",
-    age: 25,
-    gender: "Female",
-  };
-  //Creating a new instance of the User model and passing the userObj to it. This will create a new document in the User collection in the database with the data from userObj.
-  const user = new User(userObj);
-  await user
-    .save() //This will save the document in the database and return a promise. If the document is saved successfully then we will get the saved document in the then block and if there is any error in saving the document then we will get that error in the catch block.
-    .then((savedUser) => {
-      console.log("User saved successfully:", savedUser);
-      res.send("User signed up successfully!!");
-    })
-    .catch((err) => {
-      console.error("Error saving user:", err);
-      res.status(500).send("Error signing up user!!");
-    });
+  console.log("req body is ", req.body);
+  //Logic of DB call and get user data
+  //const { firstName, lastName, emailId, password, age, gender } = req.body;
+  const user = new User(req.body);
+  try {
+    await user.save();
+    res.status(201).send("User Added successfully!!");
+  } catch (err) {
+    console.error("Error creating user:", err);
+    res.status(400).send("Error saving the user" + err.message);
+  }
 });
 //Logic of DB call and get user data
 connectToDB()
