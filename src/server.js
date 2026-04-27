@@ -47,6 +47,64 @@ app.post("/signup", async (req, res) => {
     res.status(400).send("Error saving the user" + err.message);
   }
 });
+
+app.delete("/deleteUser", async (req, res) => {
+  const emailId = req.query.emailId;
+  try {
+    const deletedUser = await User.findOneAndDelete({ emailId }); //find the user with the given emailId and delete it from the database
+    if (deletedUser) {
+      res.status(200).send("User deleted successfully");
+    } else {
+      res.status(404).send("User not found"); //if user is not found in the database
+    }
+  } catch (err) {
+    console.error("Error deleting user:", err);
+    res.status(500).send("Error deleting user");
+  }
+});
+
+//delete a user by id
+app.delete("/deleteUserById", async (req, res) => {
+  const userId = req.query.userId;
+  try {
+    //syntax1: const deletedUser = await User.findOneAndDelete({ _id: userId }); //find the user with the given userId and delete it from the database
+    //const deletedUser = await User.findOneAndDelete({ _id: userId }); //find the user with the given userId and delete it from the database
+    //syntax2: const deletedUser = await User.findByIdAndDelete(userId); //find the user with the given userId and delete it from the database
+    const deletedUser = await User.findByIdAndDelete(userId); //find the user with the given userId and delete it from the database
+    if (deletedUser) {
+      res.status(200).send("User deleted successfully");
+    } else {
+      res.status(404).send("User not found"); //if user is not found in the database
+    }
+  } catch (err) {
+    console.error("Error deleting user:", err);
+    res.status(500).send("Error deleting user");
+  }
+});
+
+//Update data of the user
+app.patch("/updateUser", async (req, res) => {
+  const userId = req.body.userId; //pass the userId: id from the db here in the request body when making the API call from postman or frontend. This userId will be used to find the user in the database and update its data.
+  const updateData = req.body; //get the data to be updated from the request body
+  try {
+    const updatedUser = await User.findOneAndUpdate(
+      { _id: userId },
+      updateData,
+      {
+        returnDocument: "before", //this option is used to return the original user object before the update is applied. If we don't use this option, it will return the updated user object after the update is applied. So we can use this option to get the original user data before the update is applied and then we can compare it with the updated user data to see what has been updated.
+        //meaning in response u will see older data but in DB it gets updated with the new data that u have passed in the request body. This is just for testing purpose to see the difference b/w original data and updated data. In real world, we will usually return the updated user object after the update is applied by using { new: true } option instead of { returnDocument: "before" } option.
+      },
+    ); //find the user with the given userId and update it with the data from the request body. The { new: true } option is used to return the updated user object after the update is applied. If we don't use this option, it will return the original user object before the update is applied.
+    if (updatedUser) {
+      res.status(200).json(updatedUser); //send the updated user as response
+    } else {
+      res.status(404).send("User not found"); //if user is not found in the database
+    }
+  } catch (err) {
+    console.error("Error updating user:", err);
+    res.status(500).send("Error updating user");
+  }
+});
 //Logic of DB call and get user data
 connectToDB()
   .then(() => {
