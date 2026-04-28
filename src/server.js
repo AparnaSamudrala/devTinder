@@ -64,6 +64,25 @@ app.post("/signup", async (req, res) => {
   }
 });
 
+app.post("/login", async (req, res) => {
+  const { emailId, password } = req.body;
+  try {
+    const user = await User.findOne({ emailId });
+    if (!user) {
+      return res.status(404).send("Invalid credentials");
+    }
+    //bcrypt("plain text password", "hashed password from DB") => it will return true if the plain text password matches the hashed password from the database, otherwise it will return false. So we can use this function to compare the plain text password entered by the user during login with the hashed password stored in the database for that user.
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).send("Invalid credentials");
+    }
+    res.status(200).send("Login successful");
+  } catch (err) {
+    console.error("Error during login:", err);
+    res.status(500).send("Error during login");
+  }
+});
+
 app.delete("/deleteUser", async (req, res) => {
   const emailId = req.query.emailId;
   try {
