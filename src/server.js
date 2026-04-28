@@ -1,6 +1,8 @@
 const express = require("express");
 const connectToDB = require("./config/database"); //to connect to database
 const User = require("./models/user"); //to perform DB operations on User collection
+const { validateSignUpData } = require("./utils/validation"); //to validate the data for signup API
+const bcrypt = require("bcrypt"); //to hash the password before saving it to the database for security reasons. This is not recommended for production applications but we are using it here just for demonstration purposes.
 const app = express(); //instance of express application
 app.use(express.json()); //to parse the incoming request body as JSON for all routes. This middleware will be executed for every incoming request and it will parse the request body as JSON and make it available in req.body. So we can access the request body in our route handlers using req.body.
 //Get User by email
@@ -34,17 +36,31 @@ app.get("/feed", async (req, res) => {
   }
 });
 app.post("/signup", async (req, res) => {
-  console.log("req body is ", req.body);
-  //Logic of DB call and get user data
-  //const { firstName, lastName, emailId, password, age, gender } = req.body;
-  const user = new User(req.body);
-  //we pass user data from request body to the User model and create a new user instance. This will create a new user object with the data from the request body and we can then save this user object to the database using user.save() method.
   try {
+    //validation of data
+    validateSignUpData(req); //this function will validate the data for signup API and if there is any error in the data, it will throw an error and we can catch that error in the catch block and send the error message as response to the client. If there is no error in the data, it will simply return and we can proceed with creating the user in the database.
+    //Encrypt the password - in real world we should hash the password before saving it to the database for security reasons. But for simplicity, we are just storing the plain text password in the database. This is not recommended for production applications.
+    const { firstName, lastName, emailId, skills, password } = req.body;
+    const passwordhash = await bcrypt.hash(password, 10); //hash the password with a salt round of 10. The higher the salt round, the more secure the password will be but it will also take more time to hash the password. So we need to find a balance between security and performance when choosing the salt round. A common practice is to use a salt round of 10 or 12 for hashing passwords.
+    req.body.password = passwordhash; //replace the plain text password with the hashed password in the request body before saving it to the database. This way we can ensure that the password is stored securely in the database.
+    console.log("password hash is ", passwordhash);
+    console.log("req body is ", req.body);
+    //Logic of DB call and get user data
+    //const { firstName, lastName, emailId, password, age, gender } = req.body;
+    const user = new User({
+      firstName,
+      lastName,
+      emailId,
+      skills,
+      password: passwordhash,
+    });
+    //we pass user data from request body to the User model and create a new user instance. This will create a new user object with the data from the request body and we can then save this user object to the database using user.save() method.
+
     await user.save();
     res.status(201).send("User Added successfully!!");
   } catch (err) {
-    console.error("Error creating user:", err);
-    res.status(400).send("Error saving the user" + err.message);
+    console.error("Error creating user: ", err);
+    res.status(400).send("Error saving the user: " + err.message);
   }
 });
 
