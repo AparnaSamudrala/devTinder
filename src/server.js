@@ -83,10 +83,22 @@ app.delete("/deleteUserById", async (req, res) => {
 });
 
 //Update data of the user
-app.patch("/updateUser", async (req, res) => {
-  const userId = req.body.userId; //pass the userId: id from the db here in the request body when making the API call from postman or frontend. This userId will be used to find the user in the database and update its data.
+app.patch("/updateUser/:userId", async (req, res) => {
+  const userId = req.params?.userId; //get the userId from the URL parameters
   const updateData = req.body; //get the data to be updated from the request body
+
   try {
+    const ALLOWED_UPDATES = ["age", "gender", "photoUrl", "bio"];
+    const isUpdateAllowed = Object.keys(updateData).every((key) =>
+      ALLOWED_UPDATES.includes(key),
+    );
+    if (!isUpdateAllowed) {
+      return res
+        .status(400)
+        .send(
+          "Invalid updates! Only age, gender, photoUrl and bio can be updated.",
+        );
+    }
     const updatedUser = await User.findOneAndUpdate(
       { _id: userId },
       updateData,
