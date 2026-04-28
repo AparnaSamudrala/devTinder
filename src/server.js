@@ -91,7 +91,8 @@ app.patch("/updateUser", async (req, res) => {
       { _id: userId },
       updateData,
       {
-        returnDocument: "before", //this option is used to return the original user object before the update is applied. If we don't use this option, it will return the updated user object after the update is applied. So we can use this option to get the original user data before the update is applied and then we can compare it with the updated user data to see what has been updated.
+        runValidators: true, //this option is used to run the validators defined in the schema when updating a document
+        returnDocument: "after", //this option is used to return the original user object before the update is applied. If we don't use this option, it will return the updated user object after the update is applied. So we can use this option to get the original user data before the update is applied and then we can compare it with the updated user data to see what has been updated.
         //meaning in response u will see older data but in DB it gets updated with the new data that u have passed in the request body. This is just for testing purpose to see the difference b/w original data and updated data. In real world, we will usually return the updated user object after the update is applied by using { new: true } option instead of { returnDocument: "before" } option.
       },
     ); //find the user with the given userId and update it with the data from the request body. The { new: true } option is used to return the updated user object after the update is applied. If we don't use this option, it will return the original user object before the update is applied.
@@ -102,7 +103,7 @@ app.patch("/updateUser", async (req, res) => {
     }
   } catch (err) {
     console.error("Error updating user:", err);
-    res.status(500).send("Error updating user");
+    res.status(500).send("Error updating user: " + err.message);
   }
 });
 //Logic of DB call and get user data
