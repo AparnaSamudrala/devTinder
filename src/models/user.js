@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const validator = require("validator"); //to validate the emailId field in the user schema. This is a popular library for validating and sanitizing strings in JavaScript. We can use it to validate the emailId field to ensure that it is a valid email address before saving it to the database.
 const userSchema = new mongoose.Schema(
   {
     firstName: {
@@ -22,15 +23,22 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
+      //validate is a custom validator function that we can use to validate the emailId field before saving it to the database. We can use the validator library to validate the emailId field and ensure that it is a valid email address. If the emailId is not valid, we can throw an error and prevent the user from being saved to the database.
       validate(value) {
-        // Regular expression to validate email format
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(value)) {
-          throw new Error("Invalid email format");
+        if (!validator.isEmail(value)) {
+          throw new Error("Invalid email format: " + value);
         }
       },
     }, //unique: true is used to ensure that no two users can have the same emailId in the database. This will help us to identify each user uniquely by their emailId.
-    password: { type: String, required: true, minlength: 6 }, //in real world, we should hash the password before saving it to the database for security reasons. But for simplicity, we are just storing the plain text password in the database. This is not recommended for production applications.
+    password: {
+      type: String,
+      required: true,
+      validate(value) {
+        if (!validator.isStrongPassword(value)) {
+          throw new Error("Password is not strong enough");
+        }
+      },
+    }, //in real world, we should hash the password before saving it to the database for security reasons. But for simplicity, we are just storing the plain text password in the database. This is not recommended for production applications.
     age: { type: Number, min: 18 }, // for numbers it is min and for strings its minlength
     gender: {
       type: String,
@@ -49,7 +57,14 @@ const userSchema = new mongoose.Schema(
     photoUrl: {
       type: String,
       default: "https://cdn-icons-png.flaticon.com/512/149/149071.png",
-    }, //default profile picture for the user if they don't upload one. This is just a placeholder image and you can change it to any other image you want.
+      //default profile picture for the user if they don't upload one. This is just a placeholder image and you can change it to any other image you want.
+      validate(value) {
+        if (!validator.isURL(value)) {
+          //throw an error if the value is not a valid URL
+          throw new Error("Invalid URL format for photoUrl");
+        }
+      },
+    },
     bio: {
       type: String,
       minlength: 5,
