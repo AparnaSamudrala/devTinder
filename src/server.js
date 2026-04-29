@@ -3,8 +3,12 @@ const connectToDB = require("./config/database"); //to connect to database
 const User = require("./models/user"); //to perform DB operations on User collection
 const { validateSignUpData } = require("./utils/validation"); //to validate the data for signup API
 const bcrypt = require("bcrypt"); //to hash the password before saving it to the database for security reasons. This is not recommended for production applications but we are using it here just for demonstration purposes.
+const cookieParser = require("cookie-parser"); //to parse the cookies from the incoming request. This will allow us to access the cookies in our route handlers using req.cookies.
+const jwt = require("jsonwebtoken"); //to create and verify JWT tokens for authentication and authorization purposes. We will use JWT tokens to authenticate the users and to protect the routes that require authentication. We will create a JWT token when the user logs in successfully and then we will send that token back to the client in the response. The client can then store that token in the local storage or in a cookie and send it back to the server in the Authorization header of the subsequent requests to access the protected routes. We will also create a middleware function to verify the JWT token sent by the client in the Authorization header of the incoming requests to protect the routes that require authentication.
 const app = express(); //instance of express application
 app.use(express.json()); //to parse the incoming request body as JSON for all routes. This middleware will be executed for every incoming request and it will parse the request body as JSON and make it available in req.body. So we can access the request body in our route handlers using req.body.
+app.use(cookieParser()); //to parse the cookies from the incoming request. This will allow us to access the cookies in our route handlers using req.cookies.
+
 //Get User by email
 app.get("/user", async (req, res) => {
   const emailId = req.query.emailId; //get the emailId from query parameters
@@ -73,13 +77,43 @@ app.post("/login", async (req, res) => {
     }
     //bcrypt("plain text password", "hashed password from DB") => it will return true if the plain text password matches the hashed password from the database, otherwise it will return false. So we can use this function to compare the plain text password entered by the user during login with the hashed password stored in the database for that user.
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).send("Invalid credentials");
+    if (isMatch) {
+      //Create a JWT token
+      const token = await jwt.sign({ userId: user._id }, "secret-key"); //this will create a JWT token with the payload containing the userId of the logged in user and a secret key to sign the token. In real world, you should use a more secure secret key and store it in an environment variable instead of hardcoding it in the code. This is just for demonstration purposes.
+      //console.log("Generated JWT token is ", token);
+      // Add the token to cookie and send the response back to the user.
+      res.cookie("token", token);
+      res.status(200).send("Login successful");
+    } else {
+      res.status(400).send("Invalid credentials");
     }
-    res.status(200).send("Login successful");
   } catch (err) {
     console.error("Error during login:", err);
     res.status(500).send("Error during login");
+  }
+});
+
+app.get("/profile", async (req, res) => {
+  try {
+    // Implementation for fetching user profile
+    const cookies = req.cookies; //get the token from the cookie
+    const { token } = cookies; //get the token from the cookie
+    if (!token) {
+      return res.status(401).send("Unauthorized access: No token provided");
+    }
+    const decodedMessage = jwt.verify(token, "secret-key"); //verify the token and get the payload from the token. The payload will contain the userId of the logged in user that we can use to fetch the user profile from the database. In real world, you should use a more secure secret key and store it in an environment variable instead of hardcoding it in the code. This is just for demonstration purposes.
+    //console.log("Decoded JWT token is ", decodedMessage);
+    const { userId } = decodedMessage; //get the userId from the payload of the token
+    //console.log("Logged in userId is ", userId);
+    const user = await User.findById(userId); //find the user with the given userId in the database
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+    //console.log("Cookie is ", cookies);
+    res.send(user);
+  } catch (err) {
+    console.error("Error fetching profile:", err);
+    res.status(500).send("Error fetching profile" + err.message);
   }
 });
 
