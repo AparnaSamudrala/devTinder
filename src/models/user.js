@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 const validator = require("validator"); //to validate the emailId field in the user schema. This is a popular library for validating and sanitizing strings in JavaScript. We can use it to validate the emailId field to ensure that it is a valid email address before saving it to the database.
+const bcrypt = require("bcrypt"); //to hash the password before saving it to the database for security reasons. This is a popular library for hashing passwords in Node.js applications. We can use it to hash the password with a salt round of 10 before saving it to the database. This way we can ensure that the password is stored securely in the database and even if someone gets access to the database, they will not be able to see the plain text passwords of the users.
+const jwt = require("jsonwebtoken"); //to create and verify JWT tokens for authentication and authorization purposes. We will use JWT tokens to authenticate the users and to protect the routes that require authentication. We will create a JWT token when the user logs in successfully and then we will send that token back to the client in the response. The client can then store that token in the local storage or in a cookie and send it back to the server in the Authorization header of the subsequent requests to access the protected routes. We will also create a middleware function to verify the JWT token sent by the client in the Authorization header of the incoming requests to protect the routes that require authentication.
 const userSchema = new mongoose.Schema(
   {
     firstName: {
@@ -85,6 +87,19 @@ const userSchema = new mongoose.Schema(
   { timestamps: true },
 ); //this will add createdAt and updatedAt fields to the user document in the database. createdAt will store the date and time when the user document was created and updatedAt will store the date and time when the user document was last updated. This can be useful for tracking when a user was created and when they last updated their profile.
 
+userSchema.methods.getJWT = async function () {
+  const user = this; //this will refer to the user document that we are currently working with. So we can access the userId of the user document using this._id and include it in the payload of the JWT token that we are going to create.
+  return jwt.sign({ userId: user._id }, "secret-key", {
+    expiresIn: "1d",
+  });
+};
+
+userSchema.methods.validatePassword = async function (passwordInputByUser) {
+  const user = this;
+  const passwordHashInDB = user.password; //this will give us the hashed password stored in the database for that user. We can then compare this hashed password with the plain text password entered by the user during login using bcrypt.compare() function to check if they match and return true if they match, otherwise return false.
+
+  return await bcrypt.compare(passwordInputByUser, passwordHashInDB);
+};
 module.exports = mongoose.model("User", userSchema);
 //models are Capitalized and singuar not camelCased.
 //models are like instances of the collection in the database. So we need to create a model for each collection in the database. And then we can use that model to perform CRUD operations on that collection.

@@ -5,40 +5,12 @@ const { validateSignUpData } = require("./utils/validation"); //to validate the 
 const bcrypt = require("bcrypt"); //to hash the password before saving it to the database for security reasons. This is not recommended for production applications but we are using it here just for demonstration purposes.
 const cookieParser = require("cookie-parser"); //to parse the cookies from the incoming request. This will allow us to access the cookies in our route handlers using req.cookies.
 const jwt = require("jsonwebtoken"); //to create and verify JWT tokens for authentication and authorization purposes. We will use JWT tokens to authenticate the users and to protect the routes that require authentication. We will create a JWT token when the user logs in successfully and then we will send that token back to the client in the response. The client can then store that token in the local storage or in a cookie and send it back to the server in the Authorization header of the subsequent requests to access the protected routes. We will also create a middleware function to verify the JWT token sent by the client in the Authorization header of the incoming requests to protect the routes that require authentication.
+const { userAuth } = require("./middlewares/auth"); //to protect the routes that require authentication using the userAuth middleware function that we will create in the middlewares/auth.js file. This middleware function will verify the JWT token sent by the client in the Authorization header of the incoming requests and if the token is valid, it will allow the request to proceed to the route handler, otherwise it will return an unauthorized error response to the client.
+
 const app = express(); //instance of express application
 app.use(express.json()); //to parse the incoming request body as JSON for all routes. This middleware will be executed for every incoming request and it will parse the request body as JSON and make it available in req.body. So we can access the request body in our route handlers using req.body.
 app.use(cookieParser()); //to parse the cookies from the incoming request. This will allow us to access the cookies in our route handlers using req.cookies.
 
-//Get User by email
-app.get("/user", async (req, res) => {
-  const emailId = req.query.emailId; //get the emailId from query parameters
-  //you can also give emailId in the request body and then access it using req.body.emailId. But since this is a GET request, it's more common to pass parameters in the query string rather than the request body. So we will use req.query.emailId to get the emailId from the query parameters.
-  try {
-    //const user = await User.find({ emailId }); //find the users with the given emailId in the database
-    const user = await User.findOne({ emailId }); //find the user with the given emailId in the database
-    //the diff b/w find and findOne is that find will return an array of users that match the given emailId while findOne will return a single user object that matches the given emailId. Since emailId is unique for each user, we can use findOne to get the user object directly without having to access the first element of the array returned by find.
-    //if findOne({}) it returns the first document that matches the query. If no document matches, it returns null. So we can check if user is null or not to determine if a user with the given emailId exists in the database or not.
-    if (user) {
-      res.status(200).json(user); //send the user as response here res.send() will send the response as a string but we want to send the user object as a JSON response. So we will use res.json() to send the user object as a JSON response.
-    } else {
-      res.status(404).send("User not found"); //if user is not found in the database
-    }
-  } catch (err) {
-    console.error("Error fetching user:", err);
-    res.status(500).send("Error fetching user");
-  }
-});
-
-//Feed API - GET/feed get all users frmo DB.
-app.get("/feed", async (req, res) => {
-  try {
-    const users = await User.find(); //fetch all users from DB
-    res.status(200).json(users); //send the users as response
-  } catch (err) {
-    console.error("Error fetching users:", err);
-    res.status(500).send("Error fetching users");
-  }
-});
 app.post("/signup", async (req, res) => {
   try {
     //validation of data
@@ -76,13 +48,17 @@ app.post("/login", async (req, res) => {
       return res.status(404).send("Invalid credentials");
     }
     //bcrypt("plain text password", "hashed password from DB") => it will return true if the plain text password matches the hashed password from the database, otherwise it will return false. So we can use this function to compare the plain text password entered by the user during login with the hashed password stored in the database for that user.
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await user.validatePassword(password); //this is a custom instance method that we will define in the user model to compare the plain text password with the hashed password stored in the database for that user. This method will use bcrypt.compare() function to compare the passwords and return true if they match, otherwise it will return false.
     if (isMatch) {
       //Create a JWT token
-      const token = await jwt.sign({ userId: user._id }, "secret-key"); //this will create a JWT token with the payload containing the userId of the logged in user and a secret key to sign the token. In real world, you should use a more secure secret key and store it in an environment variable instead of hardcoding it in the code. This is just for demonstration purposes.
+      const token = await user.getJWT(); //this will create a JWT token with the payload containing the userId of the logged in user and a secret key to sign the token. In real world, you should use a more secure secret key and store it in an environment variable instead of hardcoding it in the code. This is just for demonstration purposes.
       //console.log("Generated JWT token is ", token);
       // Add the token to cookie and send the response back to the user.
-      res.cookie("token", token);
+      //cookie expires in 8hours, you can change it as per your requirement. This means that the user will be logged out after 8 hours and they will need to log in again to get a new token.
+      res.cookie("token", token, {
+        httpOnly: true,
+        expires: new Date(Date.now() + 8 * 3600000),
+      }); //this will set a cookie named "token" with the value of the JWT token that we just created. The httpOnly option is set to true to prevent client-side JavaScript from accessing the cookie, which can help to mitigate certain types of cross-site scripting (XSS) attacks. This way, the cookie can only be accessed by the server and not by any malicious scripts running on the client side.
       res.status(200).send("Login successful");
     } else {
       res.status(400).send("Invalid credentials");
@@ -93,23 +69,9 @@ app.post("/login", async (req, res) => {
   }
 });
 
-app.get("/profile", async (req, res) => {
+app.get("/profile", userAuth, async (req, res) => {
   try {
-    // Implementation for fetching user profile
-    const cookies = req.cookies; //get the token from the cookie
-    const { token } = cookies; //get the token from the cookie
-    if (!token) {
-      return res.status(401).send("Unauthorized access: No token provided");
-    }
-    const decodedMessage = jwt.verify(token, "secret-key"); //verify the token and get the payload from the token. The payload will contain the userId of the logged in user that we can use to fetch the user profile from the database. In real world, you should use a more secure secret key and store it in an environment variable instead of hardcoding it in the code. This is just for demonstration purposes.
-    //console.log("Decoded JWT token is ", decodedMessage);
-    const { userId } = decodedMessage; //get the userId from the payload of the token
-    //console.log("Logged in userId is ", userId);
-    const user = await User.findById(userId); //find the user with the given userId in the database
-    if (!user) {
-      return res.status(404).send("User not found");
-    }
-    //console.log("Cookie is ", cookies);
+    const user = req.user; //access the user object from the request object which was attached by the userAuth middleware
     res.send(user);
   } catch (err) {
     console.error("Error fetching profile:", err);
@@ -117,76 +79,15 @@ app.get("/profile", async (req, res) => {
   }
 });
 
-app.delete("/deleteUser", async (req, res) => {
-  const emailId = req.query.emailId;
-  try {
-    const deletedUser = await User.findOneAndDelete({ emailId }); //find the user with the given emailId and delete it from the database
-    if (deletedUser) {
-      res.status(200).send("User deleted successfully");
-    } else {
-      res.status(404).send("User not found"); //if user is not found in the database
-    }
-  } catch (err) {
-    console.error("Error deleting user:", err);
-    res.status(500).send("Error deleting user");
-  }
+app.post("/sendConnectionRequest", userAuth, async (req, res) => {
+  const user = req.user; //access the user object from the request object which was attached by the userAuth middleware
+  console.log("Send connection API is called...");
+  //Logic of DB call and get user data
+  res.send(
+    user.firstName + " " + user.lastName + " sent a connection request!!",
+  );
 });
 
-//delete a user by id
-app.delete("/deleteUserById", async (req, res) => {
-  const userId = req.query.userId;
-  try {
-    //syntax1: const deletedUser = await User.findOneAndDelete({ _id: userId }); //find the user with the given userId and delete it from the database
-    //const deletedUser = await User.findOneAndDelete({ _id: userId }); //find the user with the given userId and delete it from the database
-    //syntax2: const deletedUser = await User.findByIdAndDelete(userId); //find the user with the given userId and delete it from the database
-    const deletedUser = await User.findByIdAndDelete(userId); //find the user with the given userId and delete it from the database
-    if (deletedUser) {
-      res.status(200).send("User deleted successfully");
-    } else {
-      res.status(404).send("User not found"); //if user is not found in the database
-    }
-  } catch (err) {
-    console.error("Error deleting user:", err);
-    res.status(500).send("Error deleting user");
-  }
-});
-
-//Update data of the user
-app.patch("/updateUser/:userId", async (req, res) => {
-  const userId = req.params?.userId; //get the userId from the URL parameters
-  const updateData = req.body; //get the data to be updated from the request body
-
-  try {
-    const ALLOWED_UPDATES = ["age", "gender", "photoUrl", "bio"];
-    const isUpdateAllowed = Object.keys(updateData).every((key) =>
-      ALLOWED_UPDATES.includes(key),
-    );
-    if (!isUpdateAllowed) {
-      return res
-        .status(400)
-        .send(
-          "Invalid updates! Only age, gender, photoUrl and bio can be updated.",
-        );
-    }
-    const updatedUser = await User.findOneAndUpdate(
-      { _id: userId },
-      updateData,
-      {
-        runValidators: true, //this option is used to run the validators defined in the schema when updating a document
-        returnDocument: "after", //this option is used to return the original user object before the update is applied. If we don't use this option, it will return the updated user object after the update is applied. So we can use this option to get the original user data before the update is applied and then we can compare it with the updated user data to see what has been updated.
-        //meaning in response u will see older data but in DB it gets updated with the new data that u have passed in the request body. This is just for testing purpose to see the difference b/w original data and updated data. In real world, we will usually return the updated user object after the update is applied by using { new: true } option instead of { returnDocument: "before" } option.
-      },
-    ); //find the user with the given userId and update it with the data from the request body. The { new: true } option is used to return the updated user object after the update is applied. If we don't use this option, it will return the original user object before the update is applied.
-    if (updatedUser) {
-      res.status(200).json(updatedUser); //send the updated user as response
-    } else {
-      res.status(404).send("User not found"); //if user is not found in the database
-    }
-  } catch (err) {
-    console.error("Error updating user:", err);
-    res.status(500).send("Error updating user: " + err.message);
-  }
-});
 //Logic of DB call and get user data
 connectToDB()
   .then(() => {
