@@ -45,16 +45,20 @@ const userSchema = new mongoose.Schema(
     gender: {
       type: String,
       lowercase: true, // Always store as lowercase
-      enum: ["male", "female", "other"], //enum is used to specify the allowed
+      enum: {
+        values: ["male", "female", "other"],
+        message: `{VALUE} is not a valid gender.`,
+      },
+      //enum is used to specify the allowed
       //validate function only runs when you first create a document
       //for update operations it will not work
       // we need to define this in the route handler of update API
       // using findOneAndUpdate() method and passing the option runValidators: true. This way we can ensure that our custom validation logic is also applied when we update a document in the database.
-      validate(value) {
-        if (!["male", "female", "other"].includes(value)) {
-          throw new Error("Invalid gender");
-        } //custom validator to ensure that the gender field can only have one of the three values: "
-      },
+      //   validate(value) {
+      //     if (!["male", "female", "other"].includes(value)) {
+      //       throw new Error("Invalid gender");
+      //     } //custom validator to ensure that the gender field can only have one of the three values: "
+      //   },
     },
     photoUrl: {
       type: String,
