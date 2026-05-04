@@ -63,4 +63,47 @@ requestRouter.post(
   },
 );
 
+requestRouter.post(
+  "/request/review/:status/:requestId",
+  userAuth,
+  async (req, res) => {
+    try {
+      // User A => User B (Interested) => User B => User A (Accept/Reject)
+      // loggedInUser means toUserId
+      //status = 'interested' only we can accept or reject
+      // validate the requestId that means exist in DB
+      // allowed status types
+      const loggedInUser = req.user._id; //we can access the logged in user details from the req.user object that we set in the userAuth middleware function after verifying the JWT token sent by the client in the Authorization header of the incoming request. This will allow us to get the details of the logged in user and use it for various purposes like authorization, personalization, etc.
+      const { requestId, status } = req.params;
+      const allowedStatus = ["accepted", "rejected"];
+      if (!allowedStatus.includes(status)) {
+        return res
+          .status(400)
+          .json({ message: "Invalid status type. " + status });
+      }
+      const connectionRequest = await ConnectionRequest.findOne({
+        _id: requestId,
+        toUserId: loggedInUser._id,
+        status: "interested",
+      });
+      if (!connectionRequest) {
+        return res
+          .status(404)
+          .json({ message: "Connection request not found!!!" });
+      }
+
+      connectionRequest.status = status;
+
+      const data = await connectionRequest.save();
+      res.json({
+        message: "Connection request " + status + " successfully!!!",
+        data,
+      });
+    } catch (err) {
+      res
+        .status(400)
+        .send("Error reviewing connection request: " + err.message);
+    }
+  },
+);
 module.exports = requestRouter;

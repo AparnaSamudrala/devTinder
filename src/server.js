@@ -9,10 +9,11 @@ app.use(cookieParser()); //to parse the cookies from the incoming request. This 
 const authRouter = require("./routes/auth"); //to handle the authentication related routes like signup and login
 const profileRouter = require("./routes/profile");
 const requestRouter = require("./routes/request"); //to handle the connection request related routes like sending connection request, accepting connection request, rejecting connection request, etc.
-
+const userRouter = require("./routes/user");
 app.use("/", authRouter); //to use the authRouter for all routes that start with /auth. This way we can keep our route handlers organized and modular by separating them into different files based on their functionality.
 app.use("/", profileRouter);
 app.use("/", requestRouter);
+app.use("/", userRouter);
 
 //Logic of DB call and get user data
 connectToDB()
