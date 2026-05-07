@@ -1,7 +1,14 @@
 const express = require("express");
 const connectToDB = require("./config/database"); //to connect to database
 const cookieParser = require("cookie-parser"); //to parse the cookies from the incoming request. This will allow us to access the cookies in our route handlers using req.cookies.
+const cors = require("cors");
 const app = express(); //instance of express application
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  }),
+);
 app.use(express.json()); //to parse the incoming request body as JSON for all routes. This middleware will be executed for every incoming request and it will parse the request body as JSON and make it available in req.body. So we can access the request body in our route handlers using req.body.
 app.use(cookieParser()); //to parse the cookies from the incoming request. This will allow us to access the cookies in our route handlers using req.cookies.
 

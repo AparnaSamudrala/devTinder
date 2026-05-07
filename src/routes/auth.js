@@ -54,7 +54,7 @@ authRouter.post("/login", async (req, res) => {
         httpOnly: true,
         expires: new Date(Date.now() + 8 * 3600000),
       }); //this will set a cookie named "token" with the value of the JWT token that we just created. The httpOnly option is set to true to prevent client-side JavaScript from accessing the cookie, which can help to mitigate certain types of cross-site scripting (XSS) attacks. This way, the cookie can only be accessed by the server and not by any malicious scripts running on the client side.
-      res.status(200).send("Login successful");
+      res.status(200).send(user);
     } else {
       res.status(400).send("Invalid credentials");
     }
