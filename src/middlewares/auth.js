@@ -5,7 +5,8 @@ const userAuth = async (req, res, next) => {
     //Read the token from  the req cookie
     const { token } = req.cookies;
     if (!token) {
-      throw new Error("No token found, please login to access this resource");
+      return res.status(401).send("Please login"); //unauthorized
+      //throw new Error("No token found, please login to access this resource");
     }
     const decodedObj = await jwt.verify(token, "secret-key");
     //jwt.verify() is a method provided by the jsonwebtoken library that is used to verify the authenticity of a JWT token. It takes two arguments: the token to be verified and the secret key that was used to sign the token. If the token is valid and has not been tampered with, jwt.verify() will return the decoded payload of the token as a JavaScript object. If the token is invalid or has been tampered with, jwt.verify() will throw an error.
