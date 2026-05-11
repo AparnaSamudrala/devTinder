@@ -79,12 +79,12 @@ const userSchema = new mongoose.Schema(
     }, //default value for bio field
     skills: {
       type: [String],
-      validate: {
-        validator: function (v) {
-          return v.length >= 1 && v.length <= 20;
-        },
-        message: "Skills must be between 1 and 20",
-      },
+      // validate: {
+      //   validator: function (v) {
+      //     return v.length >= 1 && v.length <= 20;
+      //   },
+      //   message: "Skills must be between 1 and 20",
+      // },
     },
   }, //skills will be an array of strings, each string will represent a skill of the user. For example: ["JavaScript", "Node.js", "React"]
 

@@ -13,8 +13,8 @@ userRouter.get("/user/requests/received", userAuth, async (req, res) => {
       toUserId: loggedInUser._id,
       status: "interested",
     })
-      .populate("fromUserId", ["firstName", "lastName"])
-      .populate("toUserId", ["firstName", "lastName"]);
+      .populate("fromUserId", USER_SAFE_DATA)
+      .populate("toUserId", USER_SAFE_DATA);
 
     //.populate("fromUserId", "firstName lastName"); second syntax
 

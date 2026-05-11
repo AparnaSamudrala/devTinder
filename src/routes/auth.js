@@ -27,8 +27,13 @@ authRouter.post("/signup", async (req, res) => {
     });
     //we pass user data from request body to the User model and create a new user instance. This will create a new user object with the data from the request body and we can then save this user object to the database using user.save() method.
 
-    await user.save();
-    res.status(201).send("User Added successfully!!");
+    const savedUser = await user.save();
+    const token = await savedUser.getJWT();
+    res.cookie("token", token, {
+      httpOnly: true,
+      expires: new Date(Date.now() + 8 * 3600000),
+    });
+    res.json({ message: "User Added successfully!!", data: savedUser });
   } catch (err) {
     console.error("Error creating user: ", err);
     res.status(400).send("Error saving the user: " + err.message);
