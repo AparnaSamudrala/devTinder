@@ -3,6 +3,7 @@ const requestRouter = expresss.Router();
 const { userAuth } = require("../middlewares/auth"); //to protect the routes that require authentication using the userAuth middleware function that we will create in the middlewares/auth.js file. This middleware function will verify the JWT token sent by the client in the Authorization header of the incoming requests and if the token is valid, it will allow the request to proceed to the route handler, otherwise it will return an unauthorized error response to the client.
 const ConnectionRequest = require("../models/connectionRequest"); //to perform DB operations on ConnectionRequest collection
 const User = require("../models/user"); //to perform DB operations on User collection
+const sendEmail = require("../utils/sendEmail");
 
 requestRouter.post(
   "/request/send/:status/:toUserId",
@@ -52,6 +53,11 @@ requestRouter.post(
         status,
       });
       const data = await connectionRequest.save();
+      const emailRes = await sendEmail.run(
+        "A new friend request from" + req.user.firstName,
+        req.user.firstName + " is " + status + " in " + toUser.firstName,
+      );
+      console.log(emailRes);
       res.json({
         message:
           req.user.firstName + " is " + status + " in " + toUser.firstName,

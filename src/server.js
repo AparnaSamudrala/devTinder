@@ -2,6 +2,7 @@ const express = require("express");
 const connectToDB = require("./config/database"); //to connect to database
 const cookieParser = require("cookie-parser"); //to parse the cookies from the incoming request. This will allow us to access the cookies in our route handlers using req.cookies.
 const cors = require("cors");
+require("dotenv").config();
 const app = express(); //instance of express application
 app.use(
   cors({
@@ -26,7 +27,7 @@ app.use("/", userRouter);
 connectToDB()
   .then(() => {
     console.log("Connected to MongoDB successfully!");
-    app.listen(7777, () => {
+    app.listen(process.env.PORT, () => {
       console.log("Server is successfully listeing on prt 7777...");
       //port number,callback to be executed when server is up n runnning
     });
