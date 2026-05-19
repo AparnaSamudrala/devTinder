@@ -86,6 +86,8 @@ const userSchema = new mongoose.Schema(
       //   message: "Skills must be between 1 and 20",
       // },
     },
+    isPremium: { type: Boolean, default: false },
+    membershipType: { type: String },
   }, //skills will be an array of strings, each string will represent a skill of the user. For example: ["JavaScript", "Node.js", "React"]
 
   { timestamps: true },
