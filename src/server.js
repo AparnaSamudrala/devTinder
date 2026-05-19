@@ -1,11 +1,11 @@
 const express = require("express");
 const connectToDB = require("./config/database"); //to connect to database
+const app = express(); //instance of express application
 const cookieParser = require("cookie-parser"); //to parse the cookies from the incoming request. This will allow us to access the cookies in our route handlers using req.cookies.
 const cors = require("cors");
 require("dotenv").config();
-
-const app = express(); //instance of express application
 require("./utils/cronjob.js");
+
 app.use(
   cors({
     origin: "http://localhost:5173",
