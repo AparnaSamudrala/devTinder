@@ -7,6 +7,11 @@ require("dotenv").config();
 require("./utils/cronjob.js");
 
 app.use(
+  express.json({
+    verify: (req, res, buf) => {
+      req.rawBody = buf.toString();
+    },
+  }),
   cors({
     origin: "http://localhost:5173",
     credentials: true,
