@@ -5,6 +5,23 @@ const razorpayInstance = require("../utils/razorpay");
 const Payment = require("../models/payment");
 const { membershipAmount } = require("../utils/constants");
 const User = require("../models/user");
+const crypto = require("crypto");
+// Middleware to capture raw body for signature validation
+paymentRouter.use(
+  express.json({
+    verify: (req, res, buf) => {
+      req.rawBody = buf.toString();
+    },
+  }),
+);
+
+function validateWebhookSignature(body, signature, secret) {
+  const expectedSignature = crypto
+    .createHmac("sha256", secret)
+    .update(body)
+    .digest("hex");
+  return expectedSignature === signature;
+}
 
 paymentRouter.post("/payment/create", userAuth, async (req, res) => {
   try {
@@ -46,41 +63,56 @@ paymentRouter.post("/payment/create", userAuth, async (req, res) => {
 paymentRouter.post("/payment/webhook", async (req, res) => {
   try {
     console.log("Webhook Called");
-    const webhookSignature = req.get("X-Razorpay-Signature");
 
+    const webhookSignature = req.get("X-Razorpay-Signature");
     const isWebhookValid = validateWebhookSignature(
-      JSON.stringify(req.body),
+      req.rawBody,
       webhookSignature,
       process.env.RAZORPAY_WEBHOOK_SECRET,
     );
 
     if (!isWebhookValid) {
+      console.log("Invalid Webhook Signature");
       return res.status(400).json({ msg: "Webhook signature is invalid" });
     }
 
-    const paymentDetails = req.body.payload.payment.entity;
+    const event = req.body.event;
+    console.log("Webhook Event:", event);
 
-    // Update Payment status
-    const payment = await Payment.findOne({ orderId: paymentDetails.order_id });
-    if (payment) {
-      payment.status = paymentDetails.status;
-      await payment.save();
-      console.log("Payment updated:", payment);
-    }
+    // Only handle payment events
+    if (event === "payment.captured" || event === "payment.failed") {
+      const paymentDetails = req.body.payload.payment.entity;
+      console.log("Payment Details:", paymentDetails);
 
-    // Update User
-    const user = await User.findById(payment.userId);
-    if (user) {
-      user.isPremium = true;
-      user.membershipType = paymentDetails.notes.membershipType;
-      await user.save();
-      console.log("User updated:", user);
-    } else {
-      console.log("No user found for payment.userId:", payment.userId);
+      // Update Payment document
+      const payment = await Payment.findOne({
+        orderId: paymentDetails.order_id,
+      });
+      if (payment) {
+        payment.status = paymentDetails.status;
+        await payment.save();
+        console.log("Payment updated:", payment);
+      } else {
+        console.log("No Payment found for orderId:", paymentDetails.order_id);
+      }
+
+      // Update User document
+      if (payment) {
+        const user = await User.findById(payment.userId);
+        if (user) {
+          user.isPremium = paymentDetails.status === "captured";
+          user.membershipType = paymentDetails.notes.membershipType;
+          await user.save();
+          console.log("User updated:", user);
+        } else {
+          console.log("No User found for payment.userId:", payment.userId);
+        }
+      }
     }
 
     return res.status(200).json({ msg: "Webhook received successfully" });
   } catch (err) {
+    console.error("Webhook error:", err);
     return res.status(500).json({ msg: err.message });
   }
 });
