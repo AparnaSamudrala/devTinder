@@ -5,7 +5,6 @@ const razorpayInstance = require("../utils/razorpay");
 const Payment = require("../models/payment");
 const { membershipAmount } = require("../utils/constants");
 const user = require("../models/user");
-const crypto = require("crypto");
 
 paymentRouter.post("/payment/create", userAuth, async (req, res) => {
   try {
@@ -47,23 +46,22 @@ paymentRouter.post("/payment/create", userAuth, async (req, res) => {
 paymentRouter.post("/payment/webhook", async (req, res) => {
   try {
     console.log("Webhook Called");
-
     const webhookSignature = req.get("X-Razorpay-Signature");
-    console.log("Webhook Signature:", webhookSignature);
+    console.log("Webhook Signature", webhookSignature);
 
-    // ✅ Compute HMAC using raw body
-    const generatedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_WEBHOOK_SECRET)
-      .update(req.rawBody) // raw string captured in server.js
-      .digest("hex");
+    const isWebhookValid = validateWebhookSignature(
+      JSON.stringify(req.body),
+      webhookSignature,
+      process.env.RAZORPAY_WEBHOOK_SECRET,
+    );
 
-    if (generatedSignature !== webhookSignature) {
-      console.log("Invalid Webhook Signature");
+    if (!isWebhookValid) {
+      console.log("INvalid Webhook Signature");
       return res.status(400).json({ msg: "Webhook signature is invalid" });
     }
     console.log("Valid Webhook Signature");
 
-    // Update payment status in DB
+    // Udpate my payment Status in DB
     const paymentDetails = req.body.payload.payment.entity;
 
     const payment = await Payment.findOne({ orderId: paymentDetails.order_id });
@@ -74,12 +72,21 @@ paymentRouter.post("/payment/webhook", async (req, res) => {
     const user = await User.findOne({ _id: payment.userId });
     user.isPremium = true;
     user.membershipType = payment.notes.membershipType;
-    await user.save();
     console.log("User saved");
+
+    await user.save();
+
+    // Update the user as premium
+
+    // if (req.body.event == "payment.captured") {
+    // }
+    // if (req.body.event == "payment.failed") {
+    // }
+
+    // return success response to razorpay
 
     return res.status(200).json({ msg: "Webhook received successfully" });
   } catch (err) {
-    console.error("Webhook error:", err);
     return res.status(500).json({ msg: err.message });
   }
 });
